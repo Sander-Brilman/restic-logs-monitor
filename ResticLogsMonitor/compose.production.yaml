@@ -1,0 +1,9 @@
+services:
+  server:
+    image: docker.example.com/restic-logs-monitor:latest
+    restart: always
+    ports:
+      - 8080:8080
+    volumes:
+      - /etc/backup/:/app/backup_config/:ro
+      - /var/log/backup:/app/backup_logs/:ro

@@ -1,8 +1,29 @@
+using System.Reflection.Metadata;
 using ResticLogsMonitor;
 
-Directory.CreateDirectory(Reader.HostsConfigurationDirectory);
-Directory.CreateDirectory(Reader.SnapshotLogsDirectory);
-Directory.CreateDirectory(Reader.TargetsConfigurationDirectory);
+string[] requiredDirectories = [
+    Reader.HostsConfigurationDirectory,
+    Reader.SnapshotLogsDirectory,
+    Reader.TargetsConfigurationDirectory
+];
+
+foreach (var dir in requiredDirectories)
+{
+    if (Directory.Exists(dir) is false)
+    {
+        try
+        {
+            Directory.CreateDirectory(dir);
+        }
+        catch (System.Exception)
+        {
+            System.Console.WriteLine($"ERROR: directory {dir} does not exist and couldnt be created");
+            return 1;
+        }
+    }
+}
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,10 +44,10 @@ app.UseHttpsRedirection();
 
 app.MapGet("/health", async () =>
 {
-    Reader reader = new Reader();
+    Reader reader = new();
 
     BackupProfile[] profiles = await reader.GetProfiles();
-    List<BackupProfile> backupsWithIssues = [];
+    List<BackupReport> reports = [];
 
     foreach (var profile in profiles)
     {
@@ -34,7 +55,7 @@ app.MapGet("/health", async () =>
 
         if (logs is null || logs.Length == 0)
         {
-            backupsWithIssues.Add(profile);
+            reports.Add(new BackupReport(profile.HostName, profile.ServiceName, "No logs found", null));
             continue;
         }
 
@@ -43,31 +64,41 @@ app.MapGet("/health", async () =>
 
         if (timeSinceLastBackup.TotalDays > 1)
         {
-            backupsWithIssues.Add(profile);
+            reports.Add(new BackupReport(profile.HostName, profile.ServiceName, $"Backup is more then 1 day old {timeSinceLastBackup}", lastBackup.time));
             continue;
         }
 
-        bool pathsMatch = lastBackup.paths.Order().SequenceEqual(profile.Paths.Order());
-        if (pathsMatch is false)
+        string[] logPaths = [.. lastBackup.paths.Order()];
+        if (logPaths.Length < profile.Paths.Length)
         {
-            backupsWithIssues.Add(profile);
+            reports.Add(new BackupReport(profile.HostName, profile.ServiceName, "Paths missing from log", lastBackup.time));
             continue;
         }
+
+        for (int i = 0; i < logPaths.Length; i++)
+        {
+            string logPath = Path.TrimEndingDirectorySeparator(logPaths[i]);
+            string profilePath = Path.TrimEndingDirectorySeparator(profile.Paths[i]);
+            if (logPath != profilePath)
+            {
+                reports.Add(new BackupReport(profile.HostName, profile.ServiceName, "Paths do not match", lastBackup.time));
+                break;
+            }
+        }
+
+
     }
 
-    if (backupsWithIssues.Count == 0)
+    if (reports.Count == 0)
     {
         return Results.Ok(Array.Empty<BackupProfile>());
     }
 
-    return Results.BadRequest(backupsWithIssues);
-
+    return Results.BadRequest(reports);
 })
 .WithName("health check");
 
 app.Run();
+return 0;
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+public record BackupReport(string BackupHost, string ServiceName, string reason, DateTime? LastBackupDate);

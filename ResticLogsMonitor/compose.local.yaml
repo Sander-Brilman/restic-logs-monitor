@@ -1,0 +1,10 @@
+services:
+  server:
+    build:
+      context: .
+      target: final
+    ports:
+      - 8080:8080
+    volumes:
+      - ./backup_config:/app/backup_config:ro
+      - ./backup_logs:/app/backup_logs:ro

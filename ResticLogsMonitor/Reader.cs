@@ -7,7 +7,7 @@ public class Reader
 {
     public static readonly string HostsConfigurationDirectory = Path.Combine(Directory.GetCurrentDirectory(), "backup_config", "host");
     public static readonly string TargetsConfigurationDirectory = Path.Combine(Directory.GetCurrentDirectory(), "backup_config", "target");
-    public static readonly string SnapshotLogsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "backup_log");
+    public static readonly string SnapshotLogsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "backup_logs");
 
     public async Task<BackupProfile[]> GetProfiles()
     {

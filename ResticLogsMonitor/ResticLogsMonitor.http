@@ -1,6 +1,0 @@
-@ResticLogsMonitor_HostAddress = http://localhost:5158
-
-GET {{ResticLogsMonitor_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
