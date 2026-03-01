@@ -68,7 +68,8 @@ app.MapGet("/health", async () =>
             continue;
         }
 
-        string[] logPaths = [.. lastBackup.paths.Order()];
+        string[] logPaths = [.. lastBackup.paths.Select(Path.TrimEndingDirectorySeparator).Order()];
+        string[] profilePaths = [..profile.Paths.Select(Path.TrimEndingDirectorySeparator).Order()];
         if (logPaths.Length < profile.Paths.Length)
         {
             reports.Add(new BackupReport(profile.HostName, profile.ServiceName, "Paths missing from log", lastBackup.time));
@@ -77,8 +78,8 @@ app.MapGet("/health", async () =>
 
         for (int i = 0; i < logPaths.Length; i++)
         {
-            string logPath = Path.TrimEndingDirectorySeparator(logPaths[i]);
-            string profilePath = Path.TrimEndingDirectorySeparator(profile.Paths[i]);
+            string logPath = logPaths[i];
+            string profilePath = profilePaths[i];
             if (logPath != profilePath)
             {
                 reports.Add(new BackupReport(profile.HostName, profile.ServiceName, "Paths do not match", lastBackup.time));
